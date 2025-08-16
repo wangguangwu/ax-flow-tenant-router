@@ -1,9 +1,7 @@
 package com.wangguangwu.axflowtenantrouter.tenant.validator;
 
-import com.wangguangwu.axflowtenantrouter.annotation.TenantRoute;
-import com.wangguangwu.axflowtenantrouter.api.ClaimController;
+import com.wangguangwu.axflowtenantrouter.annotation.TenantValidator;
 import com.wangguangwu.axflowtenantrouter.core.validator.TenantPayloadValidator;
-import com.wangguangwu.axflowtenantrouter.model.common.ClaimIntakeRequest;
 import com.wangguangwu.axflowtenantrouter.model.common.ValidationResult;
 import com.wangguangwu.axflowtenantrouter.model.tenant.TenantBClaimIntakeRequest;
 import org.springframework.stereotype.Component;
@@ -12,28 +10,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * TenantB特定的理赔申请验证器
+ * TenantB特定的理赔申请验证器（简化版）
  * <p>
  * 负责验证TenantB特定的理赔申请请求，实现租户特定的验证规则
+ * 使用简化的 @TenantValidator 注解
  *
  * @author wangguangwu
  */
-@TenantRoute(
-        tenant = "TenantB",
-        controller = ClaimController.class,
-        methods = {"intake"},
-        base = ClaimIntakeRequest.class
-)
+@TenantValidator("TenantB")
 @Component
-public class TenantBClaimIntakeValidator implements TenantPayloadValidator<TenantBClaimIntakeRequest> {
-
+public class SimpleTenantBClaimIntakeValidator implements TenantPayloadValidator<TenantBClaimIntakeRequest> {
+    
     @Override
     public ValidationResult validate(TenantBClaimIntakeRequest payload) {
         List<String> errors = new ArrayList<>();
         
-        // 验证优先级不能为负数
-        if (payload.getPriority() != null && payload.getPriority() < 0) {
-            errors.add("priority不能为负数");
+        // TenantB特定的验证逻辑
+        if (payload.getPolicyNumber() != null && payload.getPolicyNumber().length() < 10) {
+            errors.add("保单号长度不能小于10位(示例)");
         }
         
         return errors.isEmpty() ? ValidationResult.success() : ValidationResult.fail(errors);

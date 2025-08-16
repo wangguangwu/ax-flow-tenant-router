@@ -1,9 +1,7 @@
 package com.wangguangwu.axflowtenantrouter.tenant.validator;
 
-import com.wangguangwu.axflowtenantrouter.annotation.TenantRoute;
-import com.wangguangwu.axflowtenantrouter.api.ClaimController;
+import com.wangguangwu.axflowtenantrouter.annotation.TenantValidator;
 import com.wangguangwu.axflowtenantrouter.core.validator.TenantPayloadValidator;
-import com.wangguangwu.axflowtenantrouter.model.common.ClaimIntakeRequest;
 import com.wangguangwu.axflowtenantrouter.model.common.ValidationResult;
 import com.wangguangwu.axflowtenantrouter.model.tenant.TenantAClaimIntakeRequest;
 import org.springframework.stereotype.Component;
@@ -12,20 +10,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * TenantA特定的理赔申请验证器
+ * TenantA特定的理赔申请验证器（简化版）
  * <p>
  * 负责验证TenantA特定的理赔申请请求，实现租户特定的验证规则
+ * 使用简化的 @TenantValidator 注解
  *
  * @author wangguangwu
  */
-@TenantRoute(
-        tenant = "TenantA",
-        controller = ClaimController.class,
-        methods = {"intake"},
-        base = ClaimIntakeRequest.class
-)
+@TenantValidator("TenantA")
 @Component
-public class TenantAClaimIntakeValidator implements TenantPayloadValidator<TenantAClaimIntakeRequest> {
+public class SimpleTenantAClaimIntakeValidator implements TenantPayloadValidator<TenantAClaimIntakeRequest> {
     
     @Override
     public ValidationResult validate(TenantAClaimIntakeRequest payload) {

@@ -1,28 +1,30 @@
 package com.wangguangwu.axflowtenantrouter.core.registry;
 
+import com.wangguangwu.axflowtenantrouter.annotation.TenantBinder;
 import com.wangguangwu.axflowtenantrouter.core.binder.TenantPayloadBinder;
 import com.wangguangwu.axflowtenantrouter.model.common.Holder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
+import java.lang.annotation.Annotation;
 import java.util.Optional;
 
 /**
- * 租户绑定器注册表
+ * 简化的租户绑定器注册表
  * <p>
- * 管理 TenantPayloadBinder 的注册与查询
+ * 管理 TenantPayloadBinder 的注册与查询，使用 @TenantBinder 注解
  *
  * @author wangguangwu
  */
 @Component
-public class TenantBinderRegistry extends AbstractTenantRegistry<TenantPayloadBinder<?>> {
+public class SimpleTenantBinderRegistry extends SimpleTenantRegistry<TenantPayloadBinder<?>> {
 
     /**
      * 构造函数
      *
      * @param applicationContext Spring应用上下文
      */
-    public TenantBinderRegistry(ApplicationContext applicationContext) {
+    public SimpleTenantBinderRegistry(ApplicationContext applicationContext) {
         super(applicationContext);
     }
 
@@ -34,8 +36,23 @@ public class TenantBinderRegistry extends AbstractTenantRegistry<TenantPayloadBi
     }
 
     @Override
+    protected Class<? extends Annotation> getAnnotationType() {
+        return TenantBinder.class;
+    }
+
+    @Override
     protected Class<?> extractTargetType(Object bean) {
         return ((TenantPayloadBinder<?>) bean).targetType();
+    }
+
+    @Override
+    protected String extractTenant(Annotation annotation) {
+        return ((TenantBinder) annotation).value();
+    }
+
+    @Override
+    protected int extractOrder(Annotation annotation) {
+        return ((TenantBinder) annotation).order();
     }
 
     @Override
@@ -44,14 +61,13 @@ public class TenantBinderRegistry extends AbstractTenantRegistry<TenantPayloadBi
     }
 
     /**
-     * 查找适用于指定租户、路由键和基类的绑定器
+     * 查找适用于指定租户和目标类型的绑定器
      *
-     * @param tenant 租户ID
-     * @param key    路由键（类名#方法名）
-     * @param base   基类类型
+     * @param tenant     租户ID
+     * @param targetType 目标类型
      * @return 匹配的绑定器
      */
-    public Optional<Holder> findBinder(String tenant, String key, Class<?> base) {
-        return super.find(tenant, key, base, null);
+    public Optional<Holder> findBinder(String tenant, Class<?> targetType) {
+        return super.find(tenant, targetType);
     }
 }

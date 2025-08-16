@@ -1,27 +1,21 @@
 package com.wangguangwu.axflowtenantrouter.tenant.binder;
 
-import com.wangguangwu.axflowtenantrouter.annotation.TenantRoute;
-import com.wangguangwu.axflowtenantrouter.api.ClaimController;
+import com.wangguangwu.axflowtenantrouter.annotation.TenantBinder;
 import com.wangguangwu.axflowtenantrouter.core.binder.TenantPayloadBinder;
-import com.wangguangwu.axflowtenantrouter.model.common.ClaimIntakeRequest;
 import com.wangguangwu.axflowtenantrouter.model.tenant.TenantAClaimIntakeRequest;
 import org.springframework.stereotype.Component;
 
 /**
- * TenantA特定的理赔申请绑定器
+ * TenantA特定的理赔申请绑定器（简化版）
  * <p>
  * 负责将请求体绑定到TenantA特定的理赔申请请求类型
+ * 使用简化的 @TenantBinder 注解
  *
  * @author wangguangwu
  */
-@TenantRoute(
-        tenant = "TenantA",
-        controller = ClaimController.class,
-        methods = {"intake"},
-        base = ClaimIntakeRequest.class
-)
+@TenantBinder("TenantA")
 @Component
-public class TenantAClaimIntakeBinder implements TenantPayloadBinder<TenantAClaimIntakeRequest> {
+public class SimpleTenantAClaimIntakeBinder implements TenantPayloadBinder<TenantAClaimIntakeRequest> {
 
     @Override
     public Class<TenantAClaimIntakeRequest> targetType() {

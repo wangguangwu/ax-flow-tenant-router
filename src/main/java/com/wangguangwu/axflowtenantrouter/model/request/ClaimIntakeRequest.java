@@ -1,4 +1,4 @@
-package com.wangguangwu.axflowtenantrouter.model.common;
+package com.wangguangwu.axflowtenantrouter.model.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;

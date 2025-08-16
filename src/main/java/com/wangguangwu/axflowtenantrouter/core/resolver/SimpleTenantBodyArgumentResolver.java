@@ -2,11 +2,11 @@ package com.wangguangwu.axflowtenantrouter.core.resolver;
 
 import com.wangguangwu.axflowtenantrouter.annotation.TenantBody;
 import com.wangguangwu.axflowtenantrouter.core.binder.TenantPayloadBinder;
-import com.wangguangwu.axflowtenantrouter.model.common.ValidationResult;
-import com.wangguangwu.axflowtenantrouter.model.common.Holder;
-import com.wangguangwu.axflowtenantrouter.core.registry.TenantBinderRegistry;
-import com.wangguangwu.axflowtenantrouter.core.registry.TenantValidatorRegistry;
+import com.wangguangwu.axflowtenantrouter.core.registry.SimpleTenantBinderRegistry;
+import com.wangguangwu.axflowtenantrouter.core.registry.SimpleTenantValidatorRegistry;
 import com.wangguangwu.axflowtenantrouter.core.validator.TenantPayloadValidator;
+import com.wangguangwu.axflowtenantrouter.model.common.Holder;
+import com.wangguangwu.axflowtenantrouter.model.common.ValidationResult;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -24,26 +24,25 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
-import java.lang.reflect.Method;
 import java.util.Objects;
 import java.util.Optional;
 
 /**
- * 多租户请求体参数解析器
+ * 简化的多租户请求体参数解析器
  * <p>
- * 根据租户ID和控制器方法，将请求体动态绑定到对应的子类型，
+ * 根据租户ID，将请求体动态绑定到对应的子类型，
  * 并执行标准Bean验证和租户特定验证
  *
  * @author wangguangwu
  */
 @Component
 @RequiredArgsConstructor
-public class TenantBodyArgumentResolver implements HandlerMethodArgumentResolver {
+public class SimpleTenantBodyArgumentResolver implements HandlerMethodArgumentResolver {
 
     /**
-     * 租户ID请求头名称
+     * 默认租户ID请求头名称
      */
-    private static final String TENANT_ID_HEADER = "X-Tenant-Id";
+    private static final String DEFAULT_TENANT_ID_HEADER = "X-Tenant-Id";
 
     /**
      * 标准Bean验证器
@@ -56,14 +55,14 @@ public class TenantBodyArgumentResolver implements HandlerMethodArgumentResolver
     private final MappingJackson2HttpMessageConverter jackson;
     
     /**
-     * 租户绑定器注册表
+     * 简化的租户绑定器注册表
      */
-    private final TenantBinderRegistry binderRegistry;
+    private final SimpleTenantBinderRegistry binderRegistry;
     
     /**
-     * 租户验证器注册表
+     * 简化的租户验证器注册表
      */
-    private final TenantValidatorRegistry validatorRegistry;
+    private final SimpleTenantValidatorRegistry validatorRegistry;
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
@@ -84,40 +83,85 @@ public class TenantBodyArgumentResolver implements HandlerMethodArgumentResolver
         // 包装为Spring的HttpInputMessage
         ServletServerHttpRequest input = new ServletServerHttpRequest(servletRequest);
 
-        // 获取租户ID
-        final String tenantId = servletRequest.getHeader(TENANT_ID_HEADER);
-        if (tenantId == null || tenantId.isBlank()) {
-            throw new HttpMessageNotReadableException("缺少租户ID请求头: " + TENANT_ID_HEADER, input);
-        }
+        // 获取TenantBody注解
+        TenantBody tenantBodyAnnotation = parameter.getParameterAnnotation(TenantBody.class);
+        String tenantHeader = tenantBodyAnnotation != null ? 
+                tenantBodyAnnotation.tenantHeader() : DEFAULT_TENANT_ID_HEADER;
 
-        // 构建路由键: ControllerFQN#methodName
-        Method method = Objects.requireNonNull(parameter.getMethod(), "方法不能为空");
-        final String routeKey = method.getDeclaringClass().getName() + "#" + method.getName();
+        // 获取租户ID
+        final String tenantId = servletRequest.getHeader(tenantHeader);
+        if (tenantId == null || tenantId.isBlank()) {
+            throw new HttpMessageNotReadableException("缺少租户ID请求头: " + tenantHeader, input);
+        }
 
         // 获取参数基类类型
         final Class<?> baseType = parameter.getParameterType();
 
+        // 尝试直接反序列化为基类
+        Object baseValue;
+        try {
+            baseValue = jackson.read(baseType, baseType, input);
+        } catch (Exception e) {
+            throw new HttpMessageNotReadableException(
+                    String.format("请求体反序列化失败: baseType=%s, tenant=%s, error=%s",
+                            baseType.getSimpleName(), tenantId, e.getMessage()),
+                    e, input);
+        }
+
         // 查找匹配的绑定器
-        Holder binderHolder = binderRegistry.findBinder(tenantId, routeKey, baseType)
-                .orElseThrow(() -> new HttpMessageNotReadableException(
-                        String.format("未找到匹配的绑定器: tenant=%s, key=%s, base=%s",
-                                tenantId, routeKey, baseType.getSimpleName()),
-                        input));
+        Holder binderHolder = binderRegistry.findBinder(tenantId, baseType)
+                .orElse(null);
+
+        // 如果没有找到绑定器，直接使用基类对象
+        if (binderHolder == null) {
+            return validateAndReturn(parameter, baseValue, tenantId, baseType);
+        }
 
         // 获取目标类型
         final Class<?> targetType = binderHolder.getTargetType();
 
-        // 反序列化请求体
+        // 反序列化请求体为目标类型
         final Object value;
         try {
+            // 重新读取请求体，转换为目标类型
             value = jackson.read(targetType, targetType, input);
         } catch (Exception e) {
             throw new HttpMessageNotReadableException(
-                    String.format("请求体反序列化失败: targetType=%s, tenant=%s, key=%s, error=%s",
-                            targetType.getSimpleName(), tenantId, routeKey, e.getMessage()),
+                    String.format("请求体反序列化失败: targetType=%s, tenant=%s, error=%s",
+                            targetType.getSimpleName(), tenantId, e.getMessage()),
                     e, input);
         }
 
+        // 验证并执行绑定后处理
+        Object result = validateAndReturn(parameter, value, tenantId, targetType);
+
+        // 执行绑定后处理
+        @SuppressWarnings("unchecked")
+        TenantPayloadBinder<Object> binder = (TenantPayloadBinder<Object>) binderHolder.getBean();
+        try {
+            binder.afterBind(result);
+        } catch (Exception e) {
+            throw new HttpMessageNotReadableException(
+                    String.format("绑定后处理失败: targetType=%s, tenant=%s, error=%s",
+                            targetType.getSimpleName(), tenantId, e.getMessage()),
+                    e, input);
+        }
+
+        return result;
+    }
+
+    /**
+     * 验证对象并返回
+     * 
+     * @param parameter 方法参数
+     * @param value 对象值
+     * @param tenantId 租户ID
+     * @param valueType 对象类型
+     * @return 验证后的对象
+     * @throws MethodArgumentNotValidException 如果验证失败
+     */
+    private Object validateAndReturn(MethodParameter parameter, Object value, String tenantId, Class<?> valueType) 
+            throws MethodArgumentNotValidException {
         // 获取参数名称
         final String objectName = Optional.ofNullable(parameter.getParameterName()).orElse("tenantBody");
         
@@ -126,7 +170,7 @@ public class TenantBodyArgumentResolver implements HandlerMethodArgumentResolver
         validator.validate(value, errors);
 
         // 执行租户特定验证
-        validatorRegistry.findValidator(tenantId, routeKey, baseType, targetType)
+        validatorRegistry.findValidator(tenantId, valueType)
                 .ifPresent(validatorHolder -> {
                     @SuppressWarnings("unchecked")
                     TenantPayloadValidator<Object> tenantValidator =
@@ -145,19 +189,6 @@ public class TenantBodyArgumentResolver implements HandlerMethodArgumentResolver
             throw new MethodArgumentNotValidException(parameter, errors);
         }
 
-        // 执行绑定后处理
-        @SuppressWarnings("unchecked")
-        TenantPayloadBinder<Object> binder = (TenantPayloadBinder<Object>) binderHolder.getBean();
-        try {
-            binder.afterBind(value);
-        } catch (Exception e) {
-            throw new HttpMessageNotReadableException(
-                    String.format("绑定后处理失败: targetType=%s, tenant=%s, key=%s, error=%s",
-                            targetType.getSimpleName(), tenantId, routeKey, e.getMessage()),
-                    e, input);
-        }
-
-        // 返回处理后的对象
         return value;
     }
 }

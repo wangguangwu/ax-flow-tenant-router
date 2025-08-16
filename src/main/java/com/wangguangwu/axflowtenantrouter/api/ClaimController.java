@@ -1,13 +1,14 @@
 package com.wangguangwu.axflowtenantrouter.api;
 
 import com.wangguangwu.axflowtenantrouter.annotation.TenantBody;
-import com.wangguangwu.axflowtenantrouter.model.common.ClaimAcknowledgeRequest;
-import com.wangguangwu.axflowtenantrouter.model.common.ClaimCloseRequest;
-import com.wangguangwu.axflowtenantrouter.model.common.ClaimIntakeRequest;
+import com.wangguangwu.axflowtenantrouter.model.request.ClaimAcknowledgeRequest;
+import com.wangguangwu.axflowtenantrouter.model.request.ClaimCloseRequest;
+import com.wangguangwu.axflowtenantrouter.model.request.ClaimIntakeRequest;
 import com.wangguangwu.axflowtenantrouter.service.ClaimService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author wangguangwu
  */
 @RestController
-@RequestMapping("/claims")
+@RequestMapping("/claim")
 @RequiredArgsConstructor
 public class ClaimController {
 
@@ -34,7 +35,7 @@ public class ClaimController {
      * @return 处理结果
      */
     @PostMapping("/intake")
-    public String intake(@Valid @TenantBody ClaimIntakeRequest request) {
+    public String intake(@RequestBody @Valid @TenantBody ClaimIntakeRequest request) {
         return claimService.intake(request);
     }
 
@@ -47,7 +48,7 @@ public class ClaimController {
      * @return 处理结果
      */
     @PostMapping("/acknowledge")
-    public String acknowledge(@Valid @TenantBody ClaimAcknowledgeRequest request) {
+    public String acknowledge(@RequestBody @Valid @TenantBody ClaimAcknowledgeRequest request) {
         return claimService.acknowledge(request);
     }
 
@@ -60,7 +61,7 @@ public class ClaimController {
      * @return 处理结果
      */
     @PostMapping("/close")
-    public String close(@Valid @TenantBody ClaimCloseRequest request) {
+    public String close(@RequestBody @Valid @TenantBody ClaimCloseRequest request) {
         return claimService.close(request);
     }
 }

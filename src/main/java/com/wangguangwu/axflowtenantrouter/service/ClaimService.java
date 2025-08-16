@@ -1,8 +1,8 @@
 package com.wangguangwu.axflowtenantrouter.service;
 
-import com.wangguangwu.axflowtenantrouter.model.common.ClaimAcknowledgeRequest;
-import com.wangguangwu.axflowtenantrouter.model.common.ClaimCloseRequest;
-import com.wangguangwu.axflowtenantrouter.model.common.ClaimIntakeRequest;
+import com.wangguangwu.axflowtenantrouter.model.request.ClaimAcknowledgeRequest;
+import com.wangguangwu.axflowtenantrouter.model.request.ClaimCloseRequest;
+import com.wangguangwu.axflowtenantrouter.model.request.ClaimIntakeRequest;
 import org.springframework.stereotype.Service;
 
 /**

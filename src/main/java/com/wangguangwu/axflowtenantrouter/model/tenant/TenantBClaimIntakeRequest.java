@@ -1,6 +1,6 @@
 package com.wangguangwu.axflowtenantrouter.model.tenant;
 
-import com.wangguangwu.axflowtenantrouter.model.common.ClaimIntakeRequest;
+import com.wangguangwu.axflowtenantrouter.model.request.ClaimIntakeRequest;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -22,6 +22,11 @@ public class TenantBClaimIntakeRequest extends ClaimIntakeRequest {
      */
     @Size(max = 20, message = "mainInsuredName不能超过20字")
     private String mainInsuredName;
+
+    /**
+     * 保单号
+     */
+    private String policyNumber;
 
     /**
      * 优先级

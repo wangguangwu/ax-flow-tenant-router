@@ -1,6 +1,6 @@
 package com.wangguangwu.axflowtenantrouter.model.tenant;
 
-import com.wangguangwu.axflowtenantrouter.model.common.ClaimIntakeRequest;
+import com.wangguangwu.axflowtenantrouter.model.request.ClaimIntakeRequest;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

@@ -17,14 +17,14 @@ import java.util.Optional;
  * @author wangguangwu
  */
 @Component
-public class SimpleTenantValidatorRegistry extends SimpleTenantRegistry<TenantPayloadValidator<?>> {
+public class TenantValidatorRegistry extends TenantRegistry<TenantPayloadValidator<?>> {
 
     /**
      * 构造函数
      *
      * @param applicationContext Spring应用上下文
      */
-    public SimpleTenantValidatorRegistry(ApplicationContext applicationContext) {
+    public TenantValidatorRegistry(ApplicationContext applicationContext) {
         super(applicationContext);
     }
 

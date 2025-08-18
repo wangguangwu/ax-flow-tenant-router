@@ -1,9 +1,9 @@
 package com.wangguangwu.axflowtenantrouter.core.resolver;
 
-import com.wangguangwu.axflowtenantrouter.annotation.TenantBody;
 import com.wangguangwu.axflowtenantrouter.core.binder.TenantPayloadBinder;
-import com.wangguangwu.axflowtenantrouter.core.registry.SimpleTenantBinderRegistry;
-import com.wangguangwu.axflowtenantrouter.core.registry.SimpleTenantValidatorRegistry;
+import com.wangguangwu.axflowtenantrouter.core.context.TenantContext;
+import com.wangguangwu.axflowtenantrouter.core.registry.TenantBinderRegistry;
+import com.wangguangwu.axflowtenantrouter.core.registry.TenantValidatorRegistry;
 import com.wangguangwu.axflowtenantrouter.core.validator.TenantPayloadValidator;
 import com.wangguangwu.axflowtenantrouter.model.common.Holder;
 import com.wangguangwu.axflowtenantrouter.model.common.ValidationResult;
@@ -19,6 +19,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.ObjectError;
 import org.springframework.validation.SmartValidator;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
@@ -37,12 +38,7 @@ import java.util.Optional;
  */
 @Component
 @RequiredArgsConstructor
-public class SimpleTenantBodyArgumentResolver implements HandlerMethodArgumentResolver {
-
-    /**
-     * 默认租户ID请求头名称
-     */
-    private static final String DEFAULT_TENANT_ID_HEADER = "X-Tenant-Id";
+public class TenantBodyArgumentResolver implements HandlerMethodArgumentResolver {
 
     /**
      * 标准Bean验证器
@@ -57,16 +53,16 @@ public class SimpleTenantBodyArgumentResolver implements HandlerMethodArgumentRe
     /**
      * 简化的租户绑定器注册表
      */
-    private final SimpleTenantBinderRegistry binderRegistry;
+    private final TenantBinderRegistry binderRegistry;
     
     /**
      * 简化的租户验证器注册表
      */
-    private final SimpleTenantValidatorRegistry validatorRegistry;
+    private final TenantValidatorRegistry validatorRegistry;
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
-        return parameter.hasParameterAnnotation(TenantBody.class);
+        return parameter.hasParameterAnnotation(RequestBody.class);
     }
 
     @Override
@@ -83,16 +79,8 @@ public class SimpleTenantBodyArgumentResolver implements HandlerMethodArgumentRe
         // 包装为Spring的HttpInputMessage
         ServletServerHttpRequest input = new ServletServerHttpRequest(servletRequest);
 
-        // 获取TenantBody注解
-        TenantBody tenantBodyAnnotation = parameter.getParameterAnnotation(TenantBody.class);
-        String tenantHeader = tenantBodyAnnotation != null ? 
-                tenantBodyAnnotation.tenantHeader() : DEFAULT_TENANT_ID_HEADER;
-
         // 获取租户ID
-        final String tenantId = servletRequest.getHeader(tenantHeader);
-        if (tenantId == null || tenantId.isBlank()) {
-            throw new HttpMessageNotReadableException("缺少租户ID请求头: " + tenantHeader, input);
-        }
+        String tenantId = TenantContext.getTenantId();
 
         // 获取参数基类类型
         final Class<?> baseType = parameter.getParameterType();
@@ -118,7 +106,7 @@ public class SimpleTenantBodyArgumentResolver implements HandlerMethodArgumentRe
         }
 
         // 获取目标类型
-        final Class<?> targetType = binderHolder.getTargetType();
+        final Class<?> targetType = binderHolder.targetType();
 
         // 反序列化请求体为目标类型
         final Object value;
@@ -137,7 +125,7 @@ public class SimpleTenantBodyArgumentResolver implements HandlerMethodArgumentRe
 
         // 执行绑定后处理
         @SuppressWarnings("unchecked")
-        TenantPayloadBinder<Object> binder = (TenantPayloadBinder<Object>) binderHolder.getBean();
+        TenantPayloadBinder<Object> binder = (TenantPayloadBinder<Object>) binderHolder.bean();
         try {
             binder.afterBind(result);
         } catch (Exception e) {
@@ -174,7 +162,7 @@ public class SimpleTenantBodyArgumentResolver implements HandlerMethodArgumentRe
                 .ifPresent(validatorHolder -> {
                     @SuppressWarnings("unchecked")
                     TenantPayloadValidator<Object> tenantValidator =
-                            (TenantPayloadValidator<Object>) validatorHolder.getBean();
+                            (TenantPayloadValidator<Object>) validatorHolder.bean();
                     ValidationResult validationResult = tenantValidator.validate(value);
                     if (!validationResult.isValid()) {
                         // 将租户特定验证错误添加到绑定结果

@@ -3,7 +3,7 @@ package com.wangguangwu.axflowtenantrouter.tenant.validator;
 import com.wangguangwu.axflowtenantrouter.annotation.TenantValidator;
 import com.wangguangwu.axflowtenantrouter.core.validator.TenantPayloadValidator;
 import com.wangguangwu.axflowtenantrouter.model.common.ValidationResult;
-import com.wangguangwu.axflowtenantrouter.model.tenant.TenantBClaimIntakeRequest;
+import com.wangguangwu.axflowtenantrouter.model.tenant.TenantBClaimSignRequest;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -19,14 +19,14 @@ import java.util.List;
  */
 @TenantValidator("TenantB")
 @Component
-public class SimpleTenantBClaimIntakeValidator implements TenantPayloadValidator<TenantBClaimIntakeRequest> {
+public class TenantBClaimSignValidator implements TenantPayloadValidator<TenantBClaimSignRequest> {
     
     @Override
-    public ValidationResult validate(TenantBClaimIntakeRequest payload) {
+    public ValidationResult validate(TenantBClaimSignRequest payload) {
         List<String> errors = new ArrayList<>();
         
         // TenantB特定的验证逻辑
-        if (payload.getPolicyNumber() != null && payload.getPolicyNumber().length() < 10) {
+        if (payload.getPolicyNo() != null && payload.getPolicyNo().length() < 10) {
             errors.add("保单号长度不能小于10位(示例)");
         }
         

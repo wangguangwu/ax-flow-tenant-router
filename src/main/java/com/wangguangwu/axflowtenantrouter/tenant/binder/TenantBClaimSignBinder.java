@@ -2,7 +2,7 @@ package com.wangguangwu.axflowtenantrouter.tenant.binder;
 
 import com.wangguangwu.axflowtenantrouter.annotation.TenantBinder;
 import com.wangguangwu.axflowtenantrouter.core.binder.TenantPayloadBinder;
-import com.wangguangwu.axflowtenantrouter.model.tenant.TenantBClaimIntakeRequest;
+import com.wangguangwu.axflowtenantrouter.model.tenant.TenantBClaimSignRequest;
 import org.springframework.stereotype.Component;
 
 /**
@@ -15,15 +15,15 @@ import org.springframework.stereotype.Component;
  */
 @TenantBinder("TenantB")
 @Component
-public class SimpleTenantBClaimIntakeBinder implements TenantPayloadBinder<TenantBClaimIntakeRequest> {
+public class TenantBClaimSignBinder implements TenantPayloadBinder<TenantBClaimSignRequest> {
 
     @Override
-    public Class<TenantBClaimIntakeRequest> targetType() {
-        return TenantBClaimIntakeRequest.class;
+    public Class<TenantBClaimSignRequest> targetType() {
+        return TenantBClaimSignRequest.class;
     }
     
     @Override
-    public void afterBind(TenantBClaimIntakeRequest payload) {
+    public void afterBind(TenantBClaimSignRequest payload) {
         // TenantB特定的绑定后处理逻辑
         // 如果没有特殊处理逻辑，可以留空
     }

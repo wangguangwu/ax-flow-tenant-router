@@ -1,7 +1,5 @@
 package com.wangguangwu.axflowtenantrouter.model.common;
 
-import lombok.*;
-
 /**
  * 多租户路由匹配的唯一键
  * <p>
@@ -11,26 +9,11 @@ import lombok.*;
  * - key: Controller全类名#方法名（支持通配符 *）
  * - base: 参数基类类型（用于类型匹配）
  *
+ * @param tenant 租户ID（支持通配符 *）
+ * @param key    Controller全类名#方法名（支持通配符 *）
+ * @param base   参数基类
  * @author wangguangwu
  */
-@Getter
-@EqualsAndHashCode
-@ToString
-@AllArgsConstructor
-public class RouteKey {
+public record RouteKey(String tenant, String key, Class<?> base) {
 
-    /**
-     * 租户ID（支持通配符 *）
-     */
-    private final String tenant;
-
-    /**
-     * Controller全类名#方法名（支持通配符 *）
-     */
-    private final String key;
-
-    /**
-     * 参数基类
-     */
-    private final Class<?> base;
 }

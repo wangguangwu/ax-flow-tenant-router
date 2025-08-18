@@ -1,6 +1,6 @@
 package com.wangguangwu.axflowtenantrouter.model.tenant;
 
-import com.wangguangwu.axflowtenantrouter.model.request.ClaimIntakeRequest;
+import com.wangguangwu.axflowtenantrouter.model.request.ClaimSignRequest;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -15,7 +15,7 @@ import lombok.EqualsAndHashCode;
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-public class TenantBClaimIntakeRequest extends ClaimIntakeRequest {
+public class TenantBClaimSignRequest extends ClaimSignRequest {
 
     /**
      * 主被保险人姓名
@@ -26,7 +26,7 @@ public class TenantBClaimIntakeRequest extends ClaimIntakeRequest {
     /**
      * 保单号
      */
-    private String policyNumber;
+    private String policyNo;
 
     /**
      * 优先级

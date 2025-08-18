@@ -1,8 +1,6 @@
 package com.wangguangwu.axflowtenantrouter.service;
 
-import com.wangguangwu.axflowtenantrouter.model.request.ClaimAcknowledgeRequest;
-import com.wangguangwu.axflowtenantrouter.model.request.ClaimCloseRequest;
-import com.wangguangwu.axflowtenantrouter.model.request.ClaimIntakeRequest;
+import com.wangguangwu.axflowtenantrouter.model.request.ClaimSignRequest;
 import org.springframework.stereotype.Service;
 
 /**
@@ -21,27 +19,7 @@ public class ClaimService {
      * @param request 理赔申请请求
      * @return 处理结果
      */
-    public String intake(ClaimIntakeRequest request) {
+    public String sign(ClaimSignRequest request) {
         return "INTAKE_OK:" + request.getCaseCode();
-    }
-
-    /**
-     * 处理理赔确认
-     *
-     * @param request 理赔确认请求
-     * @return 处理结果
-     */
-    public String acknowledge(ClaimAcknowledgeRequest request) {
-        return "ACK_OK:" + request.getCaseCode();
-    }
-
-    /**
-     * 处理理赔关闭
-     *
-     * @param request 理赔关闭请求
-     * @return 处理结果
-     */
-    public String close(ClaimCloseRequest request) {
-        return "CLOSE_OK:" + request.getCaseCode();
     }
 }

@@ -3,7 +3,7 @@ package com.wangguangwu.axflowtenantrouter.tenant.validator;
 import com.wangguangwu.axflowtenantrouter.annotation.TenantValidator;
 import com.wangguangwu.axflowtenantrouter.core.validator.TenantPayloadValidator;
 import com.wangguangwu.axflowtenantrouter.model.common.ValidationResult;
-import com.wangguangwu.axflowtenantrouter.model.tenant.TenantAClaimIntakeRequest;
+import com.wangguangwu.axflowtenantrouter.model.tenant.TenantAClaimSignRequest;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -19,10 +19,10 @@ import java.util.List;
  */
 @TenantValidator("TenantA")
 @Component
-public class SimpleTenantAClaimIntakeValidator implements TenantPayloadValidator<TenantAClaimIntakeRequest> {
+public class TenantAClaimSignValidator implements TenantPayloadValidator<TenantAClaimSignRequest> {
     
     @Override
-    public ValidationResult validate(TenantAClaimIntakeRequest payload) {
+    public ValidationResult validate(TenantAClaimSignRequest payload) {
         List<String> errors = new ArrayList<>();
         
         // 示例：insuredName 必须以中文字符开头（演示跨字段/复杂逻辑也可）

@@ -17,14 +17,14 @@ import java.util.Optional;
  * @author wangguangwu
  */
 @Component
-public class SimpleTenantBinderRegistry extends SimpleTenantRegistry<TenantPayloadBinder<?>> {
+public class TenantBinderRegistry extends TenantRegistry<TenantPayloadBinder<?>> {
 
     /**
      * 构造函数
      *
      * @param applicationContext Spring应用上下文
      */
-    public SimpleTenantBinderRegistry(ApplicationContext applicationContext) {
+    public TenantBinderRegistry(ApplicationContext applicationContext) {
         super(applicationContext);
     }
 

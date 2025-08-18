@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.lang.Nullable;
 
 import java.lang.annotation.Annotation;
 import java.util.*;
@@ -23,7 +22,7 @@ import java.util.stream.Stream;
  * @author wangguangwu
  */
 @RequiredArgsConstructor
-public abstract class SimpleTenantRegistry<T> implements ApplicationListener<ContextRefreshedEvent> {
+public abstract class TenantRegistry<T> implements ApplicationListener<ContextRefreshedEvent> {
 
     /**
      * 通配符常量
@@ -143,12 +142,12 @@ public abstract class SimpleTenantRegistry<T> implements ApplicationListener<Con
      */
     private void sortAndCheck(Map<RouteKey, List<Holder>> table, String kind) {
         // 按优先级排序
-        table.values().forEach(list -> list.sort(Comparator.comparingInt(Holder::getOrder)));
+        table.values().forEach(list -> list.sort(Comparator.comparingInt(Holder::order)));
         
         // 检查冲突（同一路由键下有多个相同优先级的项）
         table.entrySet().stream()
                 .filter(e -> e.getValue().size() > 1
-                        && e.getValue().get(0).getOrder() == e.getValue().get(1).getOrder())
+                        && e.getValue().get(0).order() == e.getValue().get(1).order())
                 .findAny()
                 .ifPresent(e -> {
                     throw new IllegalStateException(kind + " conflict on " + e.getKey()
@@ -175,7 +174,7 @@ public abstract class SimpleTenantRegistry<T> implements ApplicationListener<Con
                 .filter(Objects::nonNull)
                 .flatMap(List::stream)
                 // 目标类型匹配
-                .filter(h -> h.getTargetType().isAssignableFrom(targetType))
+                .filter(h -> h.targetType().isAssignableFrom(targetType))
                 .findFirst();
     }
 }

@@ -14,7 +14,7 @@ import java.util.List;
  * @author wangguangwu
  */
 @Data
-public class ClaimIntakeRequest {
+public class ClaimSignRequest {
 
     /**
      * 案件编号

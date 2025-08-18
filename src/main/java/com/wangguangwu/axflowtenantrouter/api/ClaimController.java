@@ -1,9 +1,6 @@
 package com.wangguangwu.axflowtenantrouter.api;
 
-import com.wangguangwu.axflowtenantrouter.annotation.TenantBody;
-import com.wangguangwu.axflowtenantrouter.model.request.ClaimAcknowledgeRequest;
-import com.wangguangwu.axflowtenantrouter.model.request.ClaimCloseRequest;
-import com.wangguangwu.axflowtenantrouter.model.request.ClaimIntakeRequest;
+import com.wangguangwu.axflowtenantrouter.model.request.ClaimSignRequest;
 import com.wangguangwu.axflowtenantrouter.service.ClaimService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,34 +31,8 @@ public class ClaimController {
      * @param request 理赔申请请求（会根据租户ID动态绑定到具体子类）
      * @return 处理结果
      */
-    @PostMapping("/intake")
-    public String intake(@RequestBody @Valid @TenantBody ClaimIntakeRequest request) {
-        return claimService.intake(request);
-    }
-
-    /**
-     * 理赔确认接口
-     * <p>
-     * 根据租户ID动态绑定到对应的请求类型
-     *
-     * @param request 理赔确认请求（会根据租户ID动态绑定到具体子类）
-     * @return 处理结果
-     */
-    @PostMapping("/acknowledge")
-    public String acknowledge(@RequestBody @Valid @TenantBody ClaimAcknowledgeRequest request) {
-        return claimService.acknowledge(request);
-    }
-
-    /**
-     * 理赔关闭接口
-     * <p>
-     * 根据租户ID动态绑定到对应的请求类型
-     *
-     * @param request 理赔关闭请求（会根据租户ID动态绑定到具体子类）
-     * @return 处理结果
-     */
-    @PostMapping("/close")
-    public String close(@RequestBody @Valid @TenantBody ClaimCloseRequest request) {
-        return claimService.close(request);
+    @PostMapping("/sign")
+    public String sign(@RequestBody @Valid ClaimSignRequest request) {
+        return claimService.sign(request);
     }
 }

@@ -3,7 +3,9 @@ package com.wangguangwu.axflowtenantrouter.core.registry;
 import com.wangguangwu.axflowtenantrouter.annotation.TenantBinder;
 import com.wangguangwu.axflowtenantrouter.core.binder.TenantPayloadBinder;
 import com.wangguangwu.axflowtenantrouter.model.common.Holder;
+import com.wangguangwu.axflowtenantrouter.tenant.binder.NoopBinder;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
 
 import java.lang.annotation.Annotation;
@@ -62,12 +64,23 @@ public class TenantBinderRegistry extends TenantRegistry<TenantPayloadBinder<?>>
 
     /**
      * 查找适用于指定租户和目标类型的绑定器
+     * <p>
+     * 找不到专用 binder 时，返回一个以 baseType 为 targetType 的兜底 Holder
      *
-     * @param tenant     租户ID
-     * @param targetType 目标类型
+     * @param tenant   租户ID
+     * @param baseType 目标类型
      * @return 匹配的绑定器
      */
-    public Optional<Holder> findBinder(String tenant, Class<?> targetType) {
-        return super.find(tenant, targetType);
+    public Optional<Holder> resolveOrDefault(String tenant, Class<?> baseType) {
+        Optional<Holder> found = super.find(tenant, baseType);
+        if (found.isPresent()) {
+            return found;
+        }
+
+        // 拿到 NoopBinder 实例
+        TenantPayloadBinder<?> noop = applicationContext.getBean(NoopBinder.class);
+        // 关键：兜底时把 targetType 设为 baseType（而不是 NoopBinder 的 Object.class）
+        Holder fallback = new Holder(baseType, noop, Ordered.LOWEST_PRECEDENCE);
+        return Optional.of(fallback);
     }
 }

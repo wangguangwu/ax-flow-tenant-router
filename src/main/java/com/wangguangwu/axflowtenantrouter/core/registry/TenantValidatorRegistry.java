@@ -3,7 +3,9 @@ package com.wangguangwu.axflowtenantrouter.core.registry;
 import com.wangguangwu.axflowtenantrouter.annotation.TenantValidator;
 import com.wangguangwu.axflowtenantrouter.core.validator.TenantPayloadValidator;
 import com.wangguangwu.axflowtenantrouter.model.common.Holder;
+import com.wangguangwu.axflowtenantrouter.tenant.validator.NoopValidator;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
 
 import java.lang.annotation.Annotation;
@@ -82,12 +84,21 @@ public class TenantValidatorRegistry extends TenantRegistry<TenantPayloadValidat
 
     /**
      * 查找适用于指定租户和目标类型的验证器
+     * <p>
+     * 找不到租户特定校验器时，兜底返回 NoopValidator
      *
-     * @param tenant     租户ID
-     * @param targetType 目标类型
+     * @param tenant    租户ID
+     * @param valueType 目标类型
      * @return 匹配的验证器
      */
-    public Optional<Holder> findValidator(String tenant, Class<?> targetType) {
-        return super.find(tenant, targetType);
+    public Optional<Holder> resolveOrDefault(String tenant, Class<?> valueType) {
+        Optional<Holder> found = super.find(tenant, valueType);
+        if (found.isPresent()) {
+            return found;
+        }
+
+        NoopValidator noop = applicationContext.getBean(NoopValidator.class);
+        Holder fallback = new Holder(valueType, noop, Ordered.LOWEST_PRECEDENCE);
+        return Optional.of(fallback);
     }
 }

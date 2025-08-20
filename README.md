@@ -1,209 +1,222 @@
-# AX Flow 多租户路由框架
 
-## 项目概述
+# AxFlow 多租户路由框架
 
-AX Flow 多租户路由框架是一个基于Spring Boot的轻量级多租户请求处理框架，允许根据租户ID动态路由和处理HTTP请求。该框架支持将同一API端点的请求根据不同的租户ID映射到不同的处理逻辑和数据模型，实现多租户系统的灵活开发。
+> 基于 Spring Boot 的多租户“请求体自动路由 + 统一校验”解决方案。  
+> 通过 **`@AxFlow`（方法级）** + **`@AxFlowModel`（模型级）** 两个注解，按租户 ID 自动选择目标模型子类并完成校验。
 
-## 核心功能
+---
 
-- **动态请求绑定**：根据租户ID将请求体自动绑定到对应的租户特定DTO类
-- **租户特定验证**：支持标准Bean验证和租户特定的业务规则验证
-- **可扩展架构**：易于添加新租户支持，无需修改现有代码
-- **声明式配置**：通过注解轻松配置路由规则和验证逻辑
+## 🚀 快速开始
 
-## 技术栈
-
-- Java 17+
-- Spring Boot 3.x
-- Spring MVC
-- Jakarta Bean Validation API
-
-## 项目结构
-
-```
-ax-flow-tenant-router/
-├── annotation/                # 核心注解
-│   ├── TenantBody.java        # 标记需要租户特定处理的参数
-│   └── TenantRoute.java       # 配置租户路由规则
-├── api/                       # API控制器
-│   └── ClaimController.java   # 示例控制器
-├── config/                    # 配置类
-│   └── WebMvcConfig.java      # Spring MVC配置
-├── core/                      # 核心组件
-│   ├── binder/                # 绑定器接口
-│   │   └── TenantPayloadBinder.java
-│   ├── registry/              # 注册表实现
-│   │   ├── AbstractTenantRegistry.java
-│   │   ├── TenantBinderRegistry.java
-│   │   └── TenantValidatorRegistry.java
-│   ├── resolver/              # 参数解析器
-│   │   └── TenantBodyArgumentResolver.java
-│   └── validator/             # 验证器接口
-│       └── TenantPayloadValidator.java
-├── model/                     # 数据模型
-│   ├── common/                # 通用模型类
-│   │   ├── ClaimAcknowledgeRequest.java
-│   │   ├── ClaimCloseRequest.java
-│   │   ├── ClaimIntakeRequest.java
-│   │   ├── Holder.java
-│   │   ├── RouteKey.java
-│   │   └── ValidationResult.java
-│   └── tenant/                # 租户特定模型类
-│       ├── TenantAClaimIntakeRequest.java
-│       └── TenantBClaimIntakeRequest.java
-├── service/                   # 业务服务
-│   └── ClaimService.java      # 示例服务
-└── tenant/                    # 租户特定实现
-    ├── binder/                # 租户特定绑定器
-    │   ├── ASignIntakeBinder.java
-    │   ├── BSignIntakeBinder.java
-    │   └── DefaultIntakeBinder.java
-    └── validator/             # 租户特定验证器
-        ├── ASignIntakeValidator.java
-        └── BSignIntakeValidator.java
+```bash
+mvn -q spring-boot:run
+# 健康检查
+curl -s http://localhost:8080/payment/ping
 ```
 
-## 核心组件说明
+**示例调用（TenantA → AliPay）**
+```bash
+curl -sS -X POST http://localhost:8080/payment/submit \
+  -H 'Content-Type: application/json' \
+  -H 'X-Tenant-Id: TenantA' \
+  -d '{"amount":"100.00","sellerId":"A-SELLER-001","appId":"A-APP-001"}'
+```
 
-### 1. 注解
+成功返回（统一包裹为 `ApiResult`）：
+```json
+{"code":200,"message":"OK","data":{"amount":"100.00","sellerId":"A-SELLER-001","appId":"A-APP-001"}}
+```
 
-- **@TenantBody**：标记需要进行租户特定处理的控制器方法参数
-- **@TenantRoute**：配置租户路由规则，用于注册绑定器和验证器
+---
 
-### 2. 参数解析器
+## 🧩 核心注解（已在工程中实现）
 
-- **TenantBodyArgumentResolver**：核心组件，负责根据租户ID和控制器方法，将请求体动态绑定到对应的子类型，并执行标准Bean验证和租户特定验证
-
-### 3. 绑定器和验证器
-
-- **TenantPayloadBinder**：租户特定的请求体绑定器接口，负责指定请求体应该绑定到哪个具体的子类型
-- **TenantPayloadValidator**：租户特定的请求体验证器接口，负责对请求体进行租户特定的业务规则验证
-
-### 4. 注册表
-
-- **TenantBinderRegistry**：管理和查找租户特定的绑定器
-- **TenantValidatorRegistry**：管理和查找租户特定的验证器
-
-## 使用指南
-
-### 1. 定义基础请求模型
-
-首先，创建一个通用的基础请求模型类：
+### `@AxFlowModel`
+标注在 **租户特定模型子类** 上。声明该子类对应的租户集合，以及（可选的）**基类**。
 
 ```java
-@Data
-public class ClaimIntakeRequest {
-    @NotBlank(message = "caseCode不能为空")
-    private String caseCode;
-    
-    @NotBlank(message = "claimType不能为空")
-    private String claimType;
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface AxFlowModel {
+    String[] value();           // 必填，支持的租户列表，如 {"TenantA"} 或 {"TenantA","TenantB"}
+    Class<?> base() default Void.class; // 可选，显式指定基类；未指定将自动推断父类，否则用自身作为基类
 }
 ```
 
-### 2. 创建租户特定的子类
+> **自动推断规则**：若存在非 `Object` 父类，则使用最顶层非 `Object` 父类作为基类；若没有父类，则使用**当前类自己**作为基类键。
 
-为每个租户创建特定的请求模型子类：
+### `@AxFlow`
+标注在 **Controller 方法** 上，用于接管请求体解析、可选校验，以及租户访问控制（白/黑名单）。
 
+```java
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface AxFlow {
+    boolean validate() default true;         // 是否启用校验（JSR-303 + 自定义 Validator）
+    Class<?>[] groups() default {};         // JSR-303 分组
+    String[] allowedTenants() default {};   // 白名单（空数组表示不限制）
+    String[] deniedTenants() default {};    // 黑名单（空数组表示不限制）
+    int paramIndex() default -1;            // 绑定的参数索引（不常用）
+    String paramName() default "";          // 绑定的参数名（不常用）
+    boolean bodyRequired() default true;    // 是否必须有请求体
+}
+```
+
+---
+
+## 🧠 工作流程（文字版）
+
+1. `TenantInterceptor` 从请求头 **`X-Tenant-Id`** 读取租户 ID 写入 `TenantContext`。  
+2. `AxFlowArgumentResolver` 捕获带 `@AxFlow` 的方法，读取请求体字节。  
+3. `AxFlowSubtypeRegistry` 根据 **(baseType, tenantId)** 找到实际子类；若找不到，使用 **baseType** 本身。  
+4. `AxFlowBinderFactory` 调用 **JacksonBinder** 将请求体反序列化为目标子类实例。  
+5. 若 `validate = true`：`AxFlowValidationService` 先跑 JSR-303，再按类型执行自定义 `AxFlowValidator`。  
+6. 控制器返回 `ApiResult`；异常统一由 `GlobalExceptionHandler` 包装。
+
+> **注意**：白名单/黑名单检查在解析前执行；黑名单优先。
+
+---
+
+## 🆕 如何引入 **新租户**（不引入新逻辑，按当前工程约定）
+
+> 假设我们已有基类 `PaymentRequest`，现在要新增租户 **TenantC**，并添加其专属请求模型与校验。
+
+### ✅ 步骤 0：确认扫描包
+`application.yml` 中配置了模型扫描包（默认已经指向示例包）：
+```yaml
+axflow:
+  scan-base-packages: com.wangguangwu.axflow.sample.model
+```
+> 将你的新租户模型类放在这里或追加自定义包路径（逗号分隔）。
+
+### ✅ 步骤 1：创建租户模型子类（继承基类）
+在 `com.wangguangwu.axflow.sample.model` 下新增：
 ```java
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class TenantAClaimIntakeRequest extends ClaimIntakeRequest {
-    @NotBlank(message = "signCode不能为空")
-    private String signCode;
+@AxFlowModel("TenantC")
+public class UnionPayRequest extends PaymentRequest {
+
+    @NotBlank(message = "UnionPay: merId 不能为空")
+    private String merId;
+
+    @NotBlank(message = "UnionPay: appId 不能为空")
+    private String appId;
 }
 ```
+> 这里未显式指定 `base`，框架会自动使用 `PaymentRequest` 作为基类。
 
-### 3. 实现租户特定的绑定器
-
+### ✅ （可选）步骤 2：新增租户业务校验器
 ```java
 @Component
-@TenantRoute(tenantId = "tenant-a", paramType = ClaimIntakeRequest.class)
-public class ASignIntakeBinder implements TenantPayloadBinder<TenantAClaimIntakeRequest> {
-    @Override
-    public Class<TenantAClaimIntakeRequest> targetType() {
-        return TenantAClaimIntakeRequest.class;
-    }
-    
-    @Override
-    public void postProcess(TenantAClaimIntakeRequest bound) {
-        // 可以在这里进行额外的处理
-    }
-}
-```
+@Order(100)
+public class UnionPayValidator implements AxFlowValidator<UnionPayRequest> {
 
-### 4. 实现租户特定的验证器（可选）
-
-```java
-@Component
-@TenantRoute(tenantId = "tenant-a", paramType = TenantAClaimIntakeRequest.class)
-public class ASignIntakeValidator implements TenantPayloadValidator<TenantAClaimIntakeRequest> {
     @Override
-    public ValidationResult validate(TenantAClaimIntakeRequest value) {
-        // 实现租户特定的验证逻辑
-        if (value.getSignCode().length() < 6) {
-            return ValidationResult.error("signCode长度不能小于6");
+    public Class<UnionPayRequest> targetType() { return UnionPayRequest.class; }
+
+    @Override
+    public AxFlowValidationResult validate(UnionPayRequest v) {
+        if (!v.getMerId().startsWith("U")) {
+            return AxFlowValidationResult.fail("UnionPay: merId 必须以 U 开头");
         }
-        return ValidationResult.success();
+        if (Objects.equals(v.getMerId(), v.getAppId())) {
+            return AxFlowValidationResult.fail("UnionPay: merId 和 appId 不能相同");
+        }
+        return AxFlowValidationResult.ok();
     }
 }
 ```
+> 建议每个租户模型都配一个简单业务校验器，便于明确化租户规则。
 
-### 5. 在控制器中使用
-
+### ✅ 步骤 3：控制器上开放租户访问（白名单）
+找到 `PaymentController#submitPayment`：
 ```java
-@RestController
-@RequestMapping("/claims")
-@RequiredArgsConstructor
-public class ClaimController {
-    private final ClaimService claimService;
-    
-    @PostMapping("/intake")
-    public String intake(@Valid @TenantBody ClaimIntakeRequest request) {
-        return claimService.intake(request);
-    }
+@AxFlow(allowedTenants = {"TenantA", "TenantB"})
+@PostMapping("/submit")
+public ApiResult<?> submitPayment(@RequestBody(required = false) PaymentRequest request) {
+    return ApiResult.success(request);
 }
 ```
-
-### 6. 发送请求
-
-发送请求时，需要在请求头中包含租户ID：
-
+添加 TenantC：
+```java
+@AxFlow(allowedTenants = {"TenantA", "TenantB", "TenantC"})
 ```
-POST /claims/intake
-X-Tenant-Id: tenant-a
-Content-Type: application/json
+> 如果希望“所有租户”都能访问，可以把 `allowedTenants` 留空（表示不限制），或写成 `{"*"}`（显式允许全部）。
 
-{
-  "caseCode": "CASE001",
-  "claimType": "VEHICLE",
-  "signCode": "ABC123"
+### ✅ 步骤 4：发起请求验证
+```bash
+curl -sS -X POST http://localhost:8080/payment/submit \
+  -H 'Content-Type: application/json' \
+  -H 'X-Tenant-Id: TenantC' \
+  -d '{"amount":"300.00","merId":"U-MER-001","appId":"U-APP-001"}' | jq
+```
+**预期**：`data` 字段为 `UnionPayRequest` 的 JSON；校验通过返回 `200`，若不满足 `@NotBlank` 或自定义规则，返回 `400` 的 `ApiResult`。
+
+---
+
+## 🧭 多种场景指引
+
+### 场景 A：**非继承** 的模型
+如果你的模型类 **没有继承任何非 `Object` 父类**，且你仍希望在 `Controller` 的参数上使用某个“基类”来接收，那就需要在注解里**显式指定 `base`**：
+```java
+@Data
+@AxFlowModel(value = "TenantX", base = PaymentRequest.class) // 手动指定基类
+public class TenantXPayment implements /* 无父类 */ Serializable {
+    @NotBlank private String customField;
 }
 ```
+> 否则，框架会把“当前类自己”作为基类键，无法匹配到控制器参数的 `PaymentRequest`。
 
-## 扩展指南
+### 场景 B：一个租户为 **多个基类** 提供不同实现
+- 在各自子类上写 `@AxFlowModel("TenantZ")` 即可（自动按各自的 `base` 建表）。
 
-### 添加新租户支持
+### 场景 C：扩展/替换绑定策略（一般不需要）
+- 默认 **`JacksonBinder`** 已满足大多数 JSON 反序列化需求；如需特殊格式，可实现 `AxFlowBinder`，并让 `supportsBaseType` 返回 `true` 时才纳入候选。**注意**：如果同一个 `baseType` 下出现 **多个候选 Binder**，工厂会抛冲突异常（这是既有行为，避免歧义）。
 
-1. 创建新的租户特定请求模型子类
-2. 实现对应的租户特定绑定器
-3. 可选：实现对应的租户特定验证器
-4. 使用`@TenantRoute`注解配置路由规则
+### 场景 D：修改租户头名称
+- 目前常量在 `TenantInterceptor.HEADER_TENANT = "X-Tenant-Id"`；如需修改，请同步更新客户端与文档。
 
-无需修改现有代码或配置，框架将自动注册和管理新的租户特定组件。
+---
 
-## 最佳实践
+## 🛠 测试脚本（只校验 ApiResult.code）
+项目根目录有 `test-payment.sh`，执行：
+```bash
+chmod +x test-payment.sh
+./test-payment.sh
+```
+- PASS/FAIL 汇总明确。  
+- 只以 `ApiResult.code` 为断言来源（不再纠结 HTTP 状态）。
 
-1. 将共享字段和验证规则放在基类中
-2. 将租户特定字段和验证规则放在子类中
-3. 使用明确的命名约定区分不同租户的实现
-4. 为复杂的验证逻辑创建专门的验证器
+---
 
-## 许可证
+## 📂 目录结构
+```
+src/main/java/com/wangguangwu/axflow/
+├── annotation/     # 注解定义（@AxFlow, @AxFlowModel）
+├── binding/        # 绑定器与工厂（JacksonBinder）
+├── common/         # ApiResult 与全局异常
+├── config/         # MVC 配置（拦截器与参数解析器注册）
+├── context/        # TenantContext
+├── registry/       # 子类注册中心（扫描 @AxFlowModel）
+├── sample/         # 示例模型/校验器/控制器
+├── validation/     # 校验接口与服务
+└── web/            # 租户拦截器、参数解析器
+```
 
-[待添加]
+---
 
-## 贡献指南
+## ❗ 常见坑位
+- **缺少租户头**：拦截器抛 `IllegalArgumentException`，统一返回 `ApiResult(code=400)`。  
+- **未在白名单**：`@AxFlow` 方法层面拒绝（黑名单优先，其次白名单）。  
+- **找不到子类映射**：会退回使用 **baseType** 反序列化；检查是否漏了 `@AxFlowModel` 或扫描包未覆盖。  
+- **非继承模型匹配失败**：请在 `@AxFlowModel(base=...)` 中显式指定控制器参数使用的基类。  
+- **多 Binder 冲突**：同 `baseType` 的候选超过 1 个会报错，确保只有一个生效。
 
-[待添加]
-# ax-flow-tenant-router
+---
+
+## 📝 版权 & 作者
+- 作者：**wangguangwu**  
+- 许可证：按你项目实际选择（当前示例未附带 License）
